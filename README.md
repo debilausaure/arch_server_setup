@@ -33,6 +33,21 @@ blkid
 efibootmgr --disk /dev/sdX --part X --create --label "Arch Linux" --loader /vmlinuz-linux --unicode 'root=PARTUUID=#rootPARTUUID# resume=PARTUUID=#swapPARTUUID# rw initrd=\intel-ucode.img initrd=\initramfs-linux.img' --verbose
 ```
 
+### Color ourput
+
+Add color output to common utilities. Add these lines to your shell `rc` file, for example `.zshrc`:
+
+```sh
+alias diff='diff --color=auto'
+alias grep='grep --color=auto'
+alias ip='ip -color=auto'
+
+alias ls='ls --color=auto'
+
+export LESS='-R --use-color -Dd+r$Du+b'
+export MANPAGER="less -R --use-color -Dd+r -Du+b"
+```
+
 ## Network setup
 
 Config a minimal `systemd-networkd` service.
@@ -116,5 +131,3 @@ visudo
 ```
 Uncomment the following line to allow users from group `wheel` to use sudo :  
 `# %wheel ALL=(ALL:ALL) ALL`
-
-## 
