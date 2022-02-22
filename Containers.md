@@ -12,5 +12,6 @@ chmod +x alpine-make-rootfs
 
 Then, use the script to make a minimal alpine rootfs:
 ```sh
-
+sudo ./alpine-make-rootfs --branch v3.15 --timezone 'Europe/Paris' alpine3.15-$(date +%Y%m%d).tar.gz
 ```
+
