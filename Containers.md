@@ -12,8 +12,9 @@ chmod +x alpine-make-rootfs
 
 Then, use the script to make a minimal alpine rootfs:
 ```sh
-sudo ./alpine-make-rootfs --timezone --packages 'apk-tools' 'Europe/Paris' alpine_minimal_rootfs-$(date +%Y%m%d).tar.gz
+sudo ./alpine-make-rootfs --timezone 'Europe/Paris' alpine_minimal_rootfs-$(date +%Y%m%d).tar.gz
 ```
+You can add packages to the rootfs by adding `--packages='<...>'` to the command line.
 
 `cd` into the desired folder, and extract there the alpine rootfs:
 ```sh
@@ -33,7 +34,7 @@ sudo systemd-nspawn -D somedir --read-only -U
 
 Depending on several configuration choices, you may have to add configuration options to the command-line:
 - `--resolv-conf=` if you set up DNS with `systemd-resolved` as suggested in the Network part of the guide,  
-use `--resolv-conf=bind-stub` to use the same domain name resolution as the host.
+use `--resolv-conf=bind-stub` to use the same domain name resolution as the host. You may need to remove the `/etc/resolv.conf` from the container to bind mount the file.
 
 ### Persistent storage inside the container
 
@@ -45,3 +46,5 @@ sudo useradd -r -m -s /usr/bin/nologin container-user
 
 When invoking the container, add the following command option `--bind-user=container-user` to bind the home folder of the host user inside the container.
 Additionally, you may want to automatically set the working directory to that folder; in this case also add `--chmod=/run/host/home/container-user` to the command-line.
+
+### Network namespace setup for containers
