@@ -12,7 +12,7 @@ chmod +x alpine-make-rootfs
 
 Then, use the script to make a minimal alpine rootfs:
 ```sh
-sudo ./alpine-make-rootfs --timezone --packages 'apk-tools' 'Europe/Paris' alpine_minimal_rootfs-$(date +%Y%m%d).tar.gz
+sudo ./alpine-make-rootfs --timezone 'Europe/Paris' --packages 'apk-tools' alpine_minimal_rootfs-$(date +%Y%m%d).tar.gz
 ```
 
 `cd` into the desired folder, and extract there the alpine rootfs:
