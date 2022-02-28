@@ -59,5 +59,12 @@ I recommend that you place the container inside a network namespace. According t
 
 In particular:
 - If your container does not need to perform any operations on the network, I recommend that you use the option `--private-network`, which will completely isolate your container network-wise. The container only has access to a loopback interface, isolated from the host's loopback.
-- If your container does need access to the network, I recommend that you use the option `--network-zone=<...>`. This will create a virtual interface inside your container, linked to an automatically created network bridge inside your host. All the containers spawned with the same `network-zone` name will be linked to the same bridge.  
-**Note :** you will need to configure the network inside your container to go through the bridge. Additionally, you will also to filter or route the traffic coming from your container inside your host.
+- If your container does need access to the network, I recommend that you use the option `--network-zone=<...>`. This will create a virtual interface inside your container, linked to an automatically created network bridge inside your host. All the containers spawned with the same `network-zone` name will be linked to the same bridge.
+  On the container, you will need to set the interface to up and get a dhcp lease from the host, along with a DNS and a default route. In Alpine Linux :
+  ```
+  ip link set dev host0 up
+  udhcpc -i host0
+  ```
+  **Note :** By default, `systemd-networkd` sets up a NAT; your host is used as a proxy for your container's traffic. Now you probably want to filter some of the traffic coming from/headed to your container, otherwise it kind of defeats the whole point of isolating your container's network. Unfortunately, this cannot be done through `systemd`.
+
+#### Firewalling the container with `iptables`
