@@ -68,3 +68,12 @@ In particular:
   **Note :** By default, `systemd-networkd` sets up a NAT; your host is used as a proxy for your container's traffic. Now you probably want to filter some of the traffic coming from/headed to your container, otherwise it kind of defeats the whole point of isolating your container's network. Unfortunately, this cannot be done through `systemd`.
 
 #### Firewalling the container with `iptables`
+
+You probably want to configure your firewall depending on the service that run inside your containers. Unfortunately, it is impossible to provide an efficient generic configuration, and I am unsure about . A rule of thumb is to separate your services as much as possible. As simple services tend to have very specific traffic patterns, separating them in a strict fashion will allow your kernel to enforce very strict firewall rules accomodating these simple patterns.
+
+Here are some resources to help you configure your firewall with `iptables`:
+- [Guide sur la configuration d'un pare-feu à état sur le wiki d'Arch Linux](https://wiki.archlinux.org/title/Simple_stateful_firewall)
+- [Page `iptables` sur le wiki d'Arch Linux](https://wiki.archlinux.org/title/Iptables)
+- [Page de manuel de `iptables`](https://www.man7.org/linux/man-pages/man8/iptables.8.html)
+
+Once you have the needed `iptables` rules for your container, you should be able to automate the container creation to bring its services automatically back up.
