@@ -1,0 +1,67 @@
+services:
+  minecraft_backuper:
+    build: ./minecraft_backuper
+    image: minecraft_backuper
+    container_name: minecraft_backuper
+    volumes:
+      - "server_data:/home/minecraft/mountpoint:ro"
+    networks:
+      - rcon
+    expose:
+      - 25575
+    secrets:
+      - mega_credentials
+    environment:
+      MEGA_CREDS: /run/secrets/mega_credentials
+
+  minecraft_proxy:
+    build: ./minecraft_proxy
+    image: minecraft_proxy
+    container_name: minecraft_proxy
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      traefik:
+        aliases:
+          - minecraft_proxy_traefik
+      proxy:
+        aliases:
+          - minecraft_proxy_internal
+#    ports:
+#      - "25565:25565"
+    expose:
+      - 25565
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.tcp.services.minecraft.loadbalancer.server.port=25565"
+      - "traefik.tcp.routers.minecraft.entrypoints=minecraft"
+      - "traefik.tcp.routers.minecraft.service=minecraft"
+      - "traefik.tcp.routers.minecraft.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.minecraft.tls=false"
+
+  minecraft_server:
+    build: ./minecraft_server
+    image: minecraft_server
+    container_name: minecraft_server
+    volumes:
+      - "server_data:/home/minecraft/conf:rw"
+    networks:
+      - proxy
+      - rcon
+    expose:
+      - 25565
+      - 25575
+
+networks:
+  proxy: {}
+  rcon: {}
+  traefik:
+    external: true
+
+secrets:
+  mega_credentials:
+    file: mega_credentials
+
+volumes:
+    server_data:
