@@ -286,4 +286,126 @@ efibootmgr --create --disk /dev/<boot_partition> --part 1 --label "Arch Linux" -
 
 System should now be able to boot through a custom boot entry in your UEFI.
 
-TODO : TPM and SecureBoot
+# Secure Boot
+
+We deactivated Secure Boot to boot into the live Arch ISO, now we will configure it to allow our Linux Unified Kernel Image and reactivate it (and even retain the ability to boot Windows if that's what you want).
+
+Credits to Linus Karlson (@zozs), the steps detailed here are mostly from his [blogpost](https://linuskarlsson.se/blog/secure-boot-when-dual-booting-arch-linux-and-windows/).
+
+Needs to be updated with Microsoft's new KEK and DBs.
+https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-secure-boot-key-creation-and-management-guidance?view=windows-11#15-keys-required-for-secure-boot-on-all-pcs
+
+```sh
+pacman -S sbsigntools
+```
+
+## Create a GUID 
+```sh
+uuidgen --random > guid
+```
+
+## Prepare cryptographic keys
+Replace <YOURNAME> by your own name. The keys will be valid 20 years
+
+### Create a Platform Key (PK)
+```sh
+openssl req -newkey rsa:2048 -nodes -keyout pk.key -new -x509 -sha256 -days 7300 -subj "/CN=<YOURNAME> Platform Key/" -out pk.pem
+```
+```sh
+openssl x509 -outform DER -in pk.pem -out pk.crt
+```
+```sh
+cert-to-efi-sig-list -g "$(< guid)" pk.pem pk.esl
+```
+
+### Create a Key Exchange Key (KEK)
+```sh
+openssl req -newkey rsa:2048 -nodes -keyout kek.key -new -x509 -sha256 -days 7300 -subj "/CN=<YOURNAME> Key Exchange Key/" -out kek.pem
+```
+```sh
+openssl x509 -outform DER -in kek.pem -out kek.crt
+```
+```sh
+cert-to-efi-sig-list -g "$(< guid)" kek.pem kek.esl
+```
+
+### Create a Database Signature Key (DB)
+```sh
+openssl req -newkey rsa:2048 -nodes -keyout db_arch.key -new -x509 -sha256 -days 7300 -subj "/CN=<YOURNAME> Signature DB Key, Arch/" -out db_arch.pem
+```
+```sh
+openssl x509 -outform DER -in db_arch.pem -out db_arch.crt
+```
+```sh
+cert-to-efi-sig-list -g "$(< guid)" db_arch.pem db_arch.esl
+```
+
+## (Optionnal) Download and prepare Microsoft's keys
+### Download and convert Microsoft's KEK
+```sh
+curl -L -o MicCorKEKCA2011_2011-06-24.crt 'https://go.microsoft.com/fwlink/?LinkId=321185'
+```
+```sh
+openssl x509 -inform DER -outform PEM -in MicCorKEKCA2011_2011-06-24.crt -out MicCorKEKCA2011_2011-06-24.pem
+```
+```sh
+cert-to-efi-sig-list -g 77fa9abd-0359-4d32-bd60-28f4e78f784b MicCorKEKCA2011_2011-06-24.pem MicCorKEKCA2011_2011-06-24.esl
+```
+
+### Download and convert Microsoft's DBs
+```sh
+curl -OL https://www.microsoft.com/pkiops/certs/MicWinProPCA2011_2011-10-19.crt
+```
+```sh
+curl -OL https://www.microsoft.com/pkiops/certs/MicCorUEFCA2011_2011-06-27.crt
+```
+```sh
+openssl x509 -inform DER -outform PEM -in MicWinProPCA2011_2011-10-19.crt -out MicWinProPCA2011_2011-10-19.pem
+```
+```sh
+openssl x509 -inform DER -outform PEM -in MicCorUEFCA2011_2011-06-27.crt -out MicCorUEFCA2011_2011-06-27.pem
+```
+```sh
+cert-to-efi-sig-list -g 77fa9abd-0359-4d32-bd60-28f4e78f784b MicWinProPCA2011_2011-10-19.pem MicWinProPCA2011_2011-10-19.esl
+```
+```sh
+cert-to-efi-sig-list -g 77fa9abd-0359-4d32-bd60-28f4e78f784b MicCorUEFCA2011_2011-06-27.pem MicCorUEFCA2011_2011-06-27.esl
+```
+```sh
+cat MicWinProPCA2011_2011-10-19.esl MicCorUEFCA2011_2011-06-27.esl > microsoft_db.esl
+```
+
+## Sign the EFI Signature lists
+
+```sh
+sign-efi-sig-list -g "$(< guid)" -k pk.key -c pk.pem PK pk.esl pk.auth
+```
+```sh
+sign-efi-sig-list -g "$(< guid)" -k pk.key -c pk.pem KEK kek.esl kek.auth
+```
+```sh
+sign-efi-sig-list -g "$(< guid)" -k kek.key -c kek.pem db db_arch.esl db_arch.auth
+```
+
+### (Optional) Sign Microsoft's keys
+
+```sh
+sign-efi-sig-list -a -g 77fa9abd-0359-4d32-bd60-28f4e78f784b -k pk.key -c pk.pem KEK MicCorKEKCA2011_2011-06-24.esl MicCorKEKCA2011_2011-06-24.auth
+```
+```sh
+sign-efi-sig-list -a -g 77fa9abd-0359-4d32-bd60-28f4e78f784b -k kek.key -c kek.pem db microsoft_db.esl microsoft_db.auth
+```
+
+## Sign the Linux Unified Kernel Image
+
+```sh
+sbsign --key db_arch.key --cert db_arch.pem --output /EFI/Linux/arch-linux.efi /EFI/Linux/arch-linux.efi
+```
+
+## Retrieve and sign the DBX
+
+```sh
+curl -OL https://uefi.org/sites/default/files/resources/x64_DBXUpdate.bin
+```
+
+TODO : TPM
