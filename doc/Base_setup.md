@@ -312,4 +312,22 @@ curl -OL https://uefi.org/sites/default/files/resources/x64_DBXUpdate.bin
 
 Place the DBX update inside a FAT32 formatted usb key and boot into UEFI with the USB key plugged in. You should be able to set the DBX, and reactivate SecureBoot. 
 
-TODO : TPM
+# TPM auto-decrypt
+
+If you'd like to automatically decrypt your disk when you boot a signed UKI, follow this section.  
+**Make sure** that secure boot is enabled before following this section.
+
+```sh
+pacman -S tpm2-tss
+```
+
+Locate your encrypted partition, which has type crypto LUKS.
+```sh
+lsblk -f
+```
+
+```sh
+systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/<encrypted partition>
+```
+
+If you reboot, the TPM should now provide the key to decrypt your disk automatically.
