@@ -137,7 +137,7 @@ lvcreate -l 100%FREE virtual_partitions -n home
 ```
 Then we shave 256MiB off the home partition to be able to use `e2scrub` on the filesystems :
 ```sh
-lvreduce -L -256M MyVolGroup/home
+lvreduce -L -256M virtual_partitions/home
 ```
 
 ## Format the partitions
@@ -185,7 +185,7 @@ vim /mnt/etc/mkinitcpio.conf
 ```
 > ```
 > ...  
-> HOOKS=(base systemd autodetect modconf kms keyboard sd-vconsole block sd-encrypt lvm2 filesystems fsck)
+> HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt lvm2 filesystems fsck)
 > ...
 > ```
 
@@ -211,8 +211,7 @@ vim /mnt/etc/mkinitcpio.d/linux.preset
 >```
 ># mkinitcpio preset file for the 'linux' package
 >
->ALL_kver="/boot/vmlinuz-linux"`
->ALL_microcode=(/boot/*-ucode.img)`
+>ALL_kver="/boot/vmlinuz-linux"
 >
 >PRESETS=('default' 'fallback')
 >
