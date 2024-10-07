@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: "traefik:v3.0"
+    image: "traefik:v3"
     container_name: "traefik"
     command:
       #- "--log.level=DEBUG"
@@ -18,15 +18,15 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     
-  whoami:
-    image: "traefik/whoami"
-    container_name: "simple-service"
-    networks:
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
-      - "traefik.http.routers.whoami.entrypoints=web"
+  # whoami:
+  #   image: "traefik/whoami"
+  #   container_name: "simple-service"
+  #   networks:
+  #     - traefik
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+  #     - "traefik.http.routers.whoami.entrypoints=web"
 
 networks:
   traefik:

@@ -1,15 +1,6 @@
 [submodule "services/minecraft/minecraft_backuper"]
 	path = services/minecraft/minecraft_backuper
 	url = git@github.com:debilausaure/docker_minecraft_mega_backuper.git
-[submodule "services/minecraft/services/minecraft/minecraft_backuper"]
-	path = services/minecraft/services/minecraft/minecraft_backuper
-	url = git@github.com:debilausaure/docker_minecraft_mega_backuper.git
-[submodule "services/minecraft/services/minecraft/minecraft_proxy"]
-	path = services/minecraft/services/minecraft/minecraft_proxy
-	url = git@github.com:debilausaure/minecraft_proxy.git
-[submodule "services/minecraft/services/minecraft/minecraft_server"]
-	path = services/minecraft/services/minecraft/minecraft_server
-	url = git@github.com:debilausaure/docker_slim_minecraft_server.git
 [submodule "services/minecraft/minecraft_server"]
 	path = services/minecraft/minecraft_server
 	url = git@github.com:debilausaure/docker_slim_minecraft_server.git
