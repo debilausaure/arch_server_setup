@@ -171,7 +171,7 @@ swapon --mkdir /dev/virtual_partitions/swap
 
 ## Setting up the initial filesystem
 ```sh
-pacstrap -K /mnt base base-devel linux linux-firmware intel-ucode lvm2 efibootmgr man-db man
+pacstrap -K /mnt base base-devel linux linux-firmware intel-ucode lvm2 efibootmgr man-db man helix
 ```
 
 ## Configure the initramfs hooks :
@@ -213,13 +213,10 @@ vim /mnt/etc/mkinitcpio.d/linux.preset
 >
 >ALL_kver="/boot/vmlinuz-linux"
 >
->PRESETS=('default' 'fallback')
+>PRESETS=('default')
 >
 >default_uki="efi/EFI/Linux/arch-linux.efi"
 >default_options="--splash=/usr/share/systemd/bootctl/splash-arch.bmp"
->
->fallback_uki="efi/EFI/Linux/arch-linux-fallback.efi"
->fallback_options="-S autodetect --cmdline /etc/kernel/fallback_cmdline"
 >```
 
 ## Chroot into the new file system
@@ -330,3 +327,103 @@ systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/<encrypted partition
 ```
 
 If you reboot, the TPM should now provide the key to decrypt your disk automatically.
+
+
+## Network setup
+
+Config a minimal `systemd-networkd` service.
+First edit the link file (pick a MAC address of your taste):
+```sh
+helix /etc/systemd/network/20-wired.link
+```
+```
+[Match]
+MACAddress=xx:xx:xx:xx:xx:xx
+
+[Link]
+NamePolicy=kernel data onboard slot path
+MACAddressPolicy=persistent
+```
+If you want to set up Wake On Lan, add the following line to the file:
+```
+WakeOnLan=magic
+```
+
+Then, edit the network file:
+```sh
+helix /etc/systemd/network/20-wired.network
+```
+```
+[Match]
+Name=eno1
+
+[Network]
+DHCP=yes
+```
+
+Finally, enable the `systemd-networkd` service.
+```sh
+systemctl enable systemd-networkd.service
+```
+
+### Domain name resolution
+
+To set up name resolution, enable the `systemd-resolved` service.
+```sh
+systemctl enable systemd-resolved.service
+```
+
+To stay compatible with applications that read from `/etc/resolv.conf` directly, replace `/etc/resolv.conf` with a symlink to a config file listing the local DNS stub provided by `systemd-resolved`:
+```sh
+ln -rsf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+```
+
+## Set up a ssh server for remote connection
+Install `openssh`:
+```sh
+pacman -S openssh
+```
+
+I **strongly** recommend that you harden you ssh server configuration. For example, see the [Mozilla hardening recommendations](https://infosec.mozilla.org/guidelines/openssh).  
+Additionnally, I recommend that you explicitly configure which users are allowed to login through ssh. Edit `/etc/ssh/sshd_config`:
+```sh
+...
+AllowUsers  <user>
+...
+```
+
+## Install zsh and the grml config
+```sh
+pacman -S zsh grml-zsh-config
+```
+
+## Set up a new user with sudo access and zsh shell
+```sh
+pacman -S sudo
+```
+```sh
+useradd -m -G wheel -s /usr/bin/zsh <user>
+```
+```sh
+passwd <user>
+```
+```sh
+visudo
+```
+Uncomment the following line to allow users from group `wheel` to use sudo :  
+`# %wheel ALL=(ALL:ALL) ALL`
+
+### Color ourput
+
+Add color output to common utilities. Add these lines to your shell `rc` file, for example `.zshrc`:
+
+```sh
+alias diff='diff --color=auto'
+alias grep='grep --color=auto'
+alias ip='ip -color=auto'
+
+alias ls='ls --color=auto'
+
+export LESS='-R --use-color -Dd+r$Du+b'
+export MANPAGER="less -R --use-color -Dd+r -Du+b"
+```
