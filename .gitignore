@@ -1,0 +1,6 @@
+# Traefik ignores
+services/OVH/
+services/letsencrypt/
+
+# Minecraft service related ignores
+services/minecraft/mega_credentials
