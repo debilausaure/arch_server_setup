@@ -1,33 +1,92 @@
+name: traefik
+
 services:
   traefik:
     image: "traefik:v3"
     container_name: "traefik"
     command:
-      #- "--log.level=DEBUG"
+      # - "--log.level=DEBUG"
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      # HTTP (port 80) entrypoint
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      # HTTPS (port 443) entrypoint
+      - "--entrypoints.websecure.address=:443"
       - "--entrypoints.minecraft.address=:25565/tcp"
+      # Let's encrypt DNS challenge configuration
+      - "--certificatesresolvers.le-cert-resolver.acme.dnschallenge=true"
+      - "--certificatesresolvers.le-cert-resolver.acme.dnschallenge.provider=ovh"
+      - "--certificatesresolvers.le-cert-resolver.acme.email=florian.vanhems@debilausaure.re"
+      - "--certificatesresolvers.le-cert-resolver.acme.storage=/letsencrypt/wildcard_acmev2.json"
+    labels:
+      # Default certificate configuration
+      - "traefik.tls.stores.default.defaultGeneratedCert.resolver=le-cert-resolver"
+      - "traefik.tls.stores.default.defaultGeneratedCert.domain.main=*.debilausau.re"
+      - "traefik.tls.stores.default.defaultGeneratedCert.domain.sans=debilausau.re"
+      ### Debug servers
+      # - "--certificatesresolvers.le-cert-resolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
     ports:
+      # HTTP
       - "80:80"
+      # Traefik API
       - "8080:8080"
+      # HTTPS
+      - "443:443"
+      # Minecraft client
       - "25565:25565"
+    secrets:
+      # OVH DNS challenge credentials
+      - "ovh_endpoint"
+      - "ovh_application_key"
+      - "ovh_application_secret"
+      - "ovh_consumer_key"
+    environment:
+      # OVH DNS challenge credentials
+      - "OVH_POLLING_INTERVAL=10"
+      - "OVH_PROPAGATION_TIMEOUT=300"
+      - "LEGO_DISABLE_CNAME_SUPPORT=true"
+      ## OVH authentication secrets from docker
+      - "OVH_ENDPOINT_FILE=/run/secrets/ovh_endpoint"
+      - "OVH_APPLICATION_KEY_FILE=/run/secrets/ovh_application_key"
+      - "OVH_APPLICATION_SECRET_FILE=/run/secrets/ovh_application_secret"
+      - "OVH_CONSUMER_KEY_FILE=/run/secrets/ovh_consumer_key"
     networks:
       - traefik
     volumes:
+      # Bind mount to Let's Encrypt files
+      - "./letsencrypt:/letsencrypt"
+      # Daemon docket
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    
-  # whoami:
-  #   image: "traefik/whoami"
-  #   container_name: "simple-service"
-  #   networks:
-  #     - traefik
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
-  #     - "traefik.http.routers.whoami.entrypoints=web"
+
+## To enable when setting up Let's Encrypt certificates
+#  whoami:
+#    image: "traefik/whoami"
+#    container_name: "whoami"
+#    networks:
+#      - traefik
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.whoami.entrypoints=websecure"
+#      - "traefik.http.routers.whoami.tls.certresolver=le-cert-resolver"
+#      - "traefik.http.routers.whoami.tls.domains[0].main=*.debilausau.re"
+#      - "traefik.http.routers.whoami.tls.domains[0].sans=debilausau.re"
+#      - "traefik.http.routers.whoami.rule=Host(`whoami.debilausau.re`)"
+
 
 networks:
   traefik:
     name: traefik
+
+secrets:
+  ovh_endpoint:
+    file: "./OVH/dns_challenge_creds/endpoint"
+  ovh_application_key:
+    file: "./OVH/dns_challenge_creds/application_key"
+  ovh_application_secret:
+    file: "./OVH/dns_challenge_creds/application_secret"
+  ovh_consumer_key:
+    file: "./OVH/dns_challenge_creds/consumer_key"
