@@ -1,0 +1,35 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfinwebsecure.entrypoints=websecure"
+      - "traefik.http.routers.jellyfinwebsecure.tls.certresolver=le-cert-resolver"
+      - "traefik.http.routers.jellyfinwebsecure.tls.domains[0].main=jellyfin.debilausau.re"
+      - "traefik.http.routers.jellyfinwebsecure.rule=Host(`jellyfin.debilausau.re`)"
+      - "traefik.udp.routers.jellyfinDLNA.entrypoints=jellyfinDLNA"
+      - "traefik.udp.routers.jellyfinDLNA.service=jellyfinDLNA"
+      - "traefik.udp.services.jellyfinDLNA.loadbalancer.server.port=1900"
+      - "traefik.udp.routers.jellyfindisc.entrypoints=jellyfindisc"
+      - "traefik.udp.routers.jellyfindisc.service=jellyfindisc"
+      - "traefik.udp.services.jellyfindisc.loadbalancer.server.port=7359"
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - /home/jellyfin/config:/config
+      - /home/jellyfin/cache:/cache
+      - type: bind
+        source: /home/jellyfin/media
+        target: /media
+networks:
+  traefik:
+    external: true

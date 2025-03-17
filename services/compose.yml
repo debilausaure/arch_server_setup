@@ -5,7 +5,7 @@ services:
     image: "traefik:v3"
     container_name: "traefik"
     command:
-      # - "--log.level=DEBUG"
+      - "--log.level=DEBUG"
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -16,13 +16,19 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
       # HTTPS (port 443) entrypoint
       - "--entrypoints.websecure.address=:443"
+      # Minecraft (port 25565/tcp) entrypoint
       - "--entrypoints.minecraft.address=:25565/tcp"
+      # Jellyfin DLNA (port 1) entrypoint
+      - "--entrypoints.jellyfinDLNA.address=:1900/udp"
+      # Jellyfin HTTPS (port 8920) entrypoint
+      - "--entrypoints.jellyfindisc.address=:7359/udp"
       # Let's encrypt DNS challenge configuration
       - "--certificatesresolvers.le-cert-resolver.acme.dnschallenge=true"
       - "--certificatesresolvers.le-cert-resolver.acme.dnschallenge.provider=ovh"
       - "--certificatesresolvers.le-cert-resolver.acme.email=florian.vanhems@debilausaure.re"
       - "--certificatesresolvers.le-cert-resolver.acme.storage=/letsencrypt/wildcard_acmev2.json"
     labels:
+      - "traefik.enable=true"
       # Default certificate configuration
       - "traefik.tls.stores.default.defaultGeneratedCert.resolver=le-cert-resolver"
       - "traefik.tls.stores.default.defaultGeneratedCert.domain.main=*.debilausau.re"
@@ -38,6 +44,9 @@ services:
       - "443:443"
       # Minecraft client
       - "25565:25565"
+      # Jellyfin auto-discovery
+      - "1900:1900"
+      - "7359:7359"
     secrets:
       # OVH DNS challenge credentials
       - "ovh_endpoint"
