@@ -4,3 +4,4 @@ services/letsencrypt/
 
 # Minecraft service related ignores
 services/minecraft/mega_credentials
+services/minecraft/backup_key
