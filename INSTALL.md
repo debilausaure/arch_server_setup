@@ -384,11 +384,19 @@ Install `openssh`:
 pacman -S openssh
 ```
 
-I **strongly** recommend that you harden you ssh server configuration. For example, see the [Mozilla hardening recommendations](https://infosec.mozilla.org/guidelines/openssh).  
+I **strongly** recommend that you harden you ssh server configuration. For example, see the [Mozilla hardening recommendations](https://infosec.mozilla.org/guidelines/openssh).
 Additionnally, I recommend that you explicitly configure which users are allowed to login through ssh. Edit `/etc/ssh/sshd_config`:
 ```sh
 ...
 AllowUsers  <user>
+...
+```
+Fair warning : the Mozilla recommendations are now old enough that they trigger a warning from OpenSSH stating that it prevents using post-quantum key agreement
+protocols, and opens up a "store now, decrypt later" type attack. Adding the `mlkem768x25519-sha256` and `sntrup761x25519-sha512` protocols to the authorized Key
+Exchange Algorithms solves the issue.
+```
+...
+KexAlgorithms mlkem768x25519-sha256,sntrup761x25519-sha512,...
 ...
 ```
 
