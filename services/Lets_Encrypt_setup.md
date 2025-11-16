@@ -96,3 +96,90 @@ to the production servers by commenting the staging server configuration and rem
 ```
 
 Once the certificate is generated, you can comment back the `whoami` service.
+
+# Share the certificates with a KVM
+
+If, like me, you've got a KVM hooked-up to your server, you might want to make it available through the same domain name.
+Traefik handles the certificate generation, and stores the relevant informations inside a JSON file.
+We'll extract the key and the certificate from Traefik's JSON, copy them through `ssh` to the KVM, and restart it.
+This process will be set into a script, which will be called from a systemd service, automatically started everytime the file gets updated. 
+
+## Preliminary set-up
+We'll use `jq` to extract the informations from the JSON. Hence, we need `jq`:
+```sh
+pacman -S jq
+```
+
+Then, we'll need a key-pair to be able to connect without passwords to the KVM.
+Generate a key-pair on the server:
+```sh
+ssh-keygen -f ~/.ssh/kvm_id_ed25519 -t ed25519 -C "kvm" -N ''
+```
+
+Copy the key pair to the KVM:
+```sh
+ssh-copy-id -i ~/.ssh/kvm_id_25519.pub root@kvm.local
+```
+
+Add an entry in your ssh config file to specify to use the appropriate key when connecting to the kvm:
+```
+# Use an absolute path for the identity file
+Host kvm
+    HostName 192.168.1.27
+    User root
+    IdentityFile ~/.ssh/kvm_id_ed25519
+    IdentitiesOnly yes
+```
+## Automatic update setup
+
+### Create a script
+
+Create a script file under a folder of your liking (e.g. /usr/local/bin/copy_certs_to_kvm.sh):
+```sh
+#!/bin/sh
+
+CRT_FILE_PATH=/path/to/letsencrypt/folder/server.crt
+KEY_FILE_PATH=/path/to/letsencrypt/folder/server.key
+
+if [ -e $CRT_FILE_PATH ]; then
+  :> $CRT_FILE_PATH
+else
+  install -m 300 /dev/null $CRT_FILE_PATH
+fi
+if [ -e $KEY_FILE_PATH ]; then
+  :> $KEY_FILE_PATH
+else
+  install -m 300 /dev/null $KEY_FILE_PATH
+fi
+jq -r '."le-cert-resolver"."Certificates"[] | select(.domain.sans[0] == "debilausau.re")."certificate"' /path/to/letsencrypt/folder/wildcard_acmev2.json | base64 -d >> $CRT_FILE_PATH
+jq -r '."le-cert-resolver"."Certificates"[] | select(.domain.sans[0] == "debilausau.re")."key"' /path/to/letsencrypt/folder/wildcard_acmev2.json | base64 -d >> $KEY_FILE_PATH
+scp -F /path/to/your/user/.ssh/config $CRT_FILE_PATH $KEY_FILE_PATH kvm:/etc/kvm/
+timeout 30 ssh -F /path/to/your/user/.ssh/config kvm '/etc/init.d/S95nanokvm restart'
+rm $CRT_FILE_PATH
+rm $KEY_FILE_PATH
+```
+### Update service
+
+Create a service file under the system systemd folder (e.g. /etc/systemd/system/copy_certs_to_kvm.service):
+```
+[Unit]
+Description="Extract the certificate and key from the Let's Encrypt ACME json and copies with through scp to the KVM"
+
+[Service]
+ExecStart=/usr/local/bin/copy_certs_to_kvm.sh
+```
+
+### Path watching service
+
+Create a new path file `/etc/systemd/system/acme_json_monitor.path`.
+```
+[Unit]
+Description="Monitor the Let's Encrypt ACME json file for changes"
+
+[Path]
+PathModified=/path/to/letsencrypt/folder/wildcard_acmev2.json
+Unit=copy_certs_to_kvm.service
+
+[Install]
+WantedBy=multi-user.target
+```
