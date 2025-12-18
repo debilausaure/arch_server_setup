@@ -296,7 +296,7 @@ sbctl create-keys
 sbctl enroll-keys -m #add -m if you'd like to dual boot windows
 ```
 ```sh
-sbctl sign -s /efi/EFI/LINUX/arch-linux.efi
+sbctl sign -s /efi/EFI/Linux/arch-linux.efi
 ```
 You only need to do this once: a pacman hook that signs the UKI whenever it gets updated was installed with `sbctl`.
 
@@ -325,6 +325,8 @@ lsblk -f
 ```sh
 systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/<encrypted partition>
 ```
+
+__It may not be enough ! See [the Arch Wiki entry on TPMs](https://wiki.archlinux.org/title/Systemd-cryptenroll#Trusted_Platform_Module)__
 
 If you reboot, the TPM should now provide the key to decrypt your disk automatically.
 
@@ -355,11 +357,12 @@ helix /etc/systemd/network/20-wired.network
 ```
 ```
 [Match]
-Name=eno1
+Name=<name of your interface>
 
 [Network]
 DHCP=yes
 ```
+If you don't have the name of your interface, `ip a`.
 
 Finally, enable the `systemd-networkd` service.
 ```sh
@@ -384,12 +387,11 @@ Install `openssh`:
 pacman -S openssh
 ```
 
-I **strongly** recommend that you harden you ssh server configuration. For example, see the [Mozilla hardening recommendations](https://infosec.mozilla.org/guidelines/openssh).
-Additionnally, I recommend that you explicitly configure which users are allowed to login through ssh. Edit `/etc/ssh/sshd_config`:
+I **strongly** recommend that you harden you ssh server configuration. For example, see the [Mozilla hardening recommendations](https://infosec.mozilla.org/guidelines/openssh),
+and paste the modern configuration inside  `/etc/ssh/sshd_config.d/50-mozilla-modern.conf`. Don't forget to edit the modulis.
+Additionnally, I recommend that you explicitly configure which users are allowed to login through ssh. Create `/etc/ssh/sshd_config.d/51-custom.conf`:
 ```sh
-...
 AllowUsers  <user>
-...
 ```
 Fair warning : the Mozilla recommendations are now old enough that they trigger a warning from OpenSSH stating that it prevents using post-quantum key agreement
 protocols, and opens up a "store now, decrypt later" type attack. Adding the `mlkem768x25519-sha256` and `sntrup761x25519-sha512` protocols to the authorized Key
@@ -423,15 +425,43 @@ Uncomment the following line to allow users from group `wheel` to use sudo :
 
 ### Color ourput
 
-Add color output to common utilities. Add these lines to your shell `rc` file, for example `.zshrc`:
+Add color output to common utilities. Add these lines to your shell `rc` file, for example `.zshrc.local` or `/etc/profile.d/00-aliases.sh` for them to apply system-wide :
 
 ```sh
 alias diff='diff --color=auto'
 alias grep='grep --color=auto'
-alias ip='ip -color=auto'
-
+alias ip='ip --color=auto'
 alias ls='ls --color=auto'
 
 export LESS='-R --use-color -Dd+r$Du+b'
 export MANPAGER="less -R --use-color -Dd+r -Du+b"
+```
+
+### AUR helper
+
+Add the capability to download packages form the AUR. Install `yay-bin` :
+```sh
+sudo pacman -S --needed git base-devel
+git clone https://aur.archlinux.org/yay-bin.git
+cd yay-bin
+makepkg -si
+```
+
+### rate-mirrors
+
+Find the fastest mirrors when upgrading :
+```
+yay -S pacman-contrib rate-mirrors-bin
+```
+
+Add these aliases to your `rc` files:
+```
+alias pacman-drop-caches='sudo paccache -rk3; yay -Sc --aur --noconfirm'
+alias yay-update-all='export TMPFILE="$(mktemp)"; \
+    sudo true; \
+    rate-mirrors --save=$TMPFILE arch --max-delay=21600 \
+      && sudo mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist-backup \
+      && sudo mv $TMPFILE /etc/pacman.d/mirrorlist \
+      && pacman-drop-caches \
+      && yay -Syyu --noconfirm'
 ```
