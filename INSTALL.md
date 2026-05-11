@@ -293,22 +293,27 @@ pacman -S sbctl
 sbctl create-keys
 ```
 ```sh
-sbctl enroll-keys -m #add -m if you'd like to dual boot windows
+sbctl enroll-keys -m # only add -m if you'd like to dual boot windows
 ```
-When enrolling keys, if `sbctl` complains about not finding TPM Eventlog ("Could not find any TPM Eventlog in the system. This means we do not know if there is any OptionROM present on the system.") that means `/sys/kernel/security/tpm0/binary_bios_measurements` isn't accesible because the `sys` filesystem isn't mounted. By rebooting on the "rescue" mode, the `sys` filesystem will be automatically and available mounted. Be careful, since you will reboot in the newly installed system you won't have the network configured. If you'd like to use the TPM auto-decrypt feature, you should install the `tpm2-tss` before rebooting. 
+
+Here `sbctl` might complain about missing a TPM Eventlog, with the following message :
+> "Could not find any TPM Eventlog in the system. This means we do not know if there is any OptionROM present on the system."
+
+This is because `sbctl` cannot access `/sys/kernel/security/tpm0/binary_bios_measurements`, probably because the `sys` filesystem isn't mounted, which is expected in a chroot environment.
+The `sys` filesystem will be automatically mounted when booted directly. Before rebooting and continuing the install, make sure you install the appropriate packages to configure internet
+access. If you'd like to use the TPM auto-decrypt feature, you may also install `tpm2-tss` before rebooting.
 
 ```sh
 sbctl sign -s /efi/EFI/Linux/arch-linux.efi
 ```
 You only need to do this once: a pacman hook that signs the UKI whenever it gets updated was installed with `sbctl`.
 
-## Retrieve the DBX
+## If you added Microsoft keys, retrieve the DBX
 
-```sh
-curl -OL https://uefi.org/sites/default/files/resources/x64_DBXUpdate.bin
-```
+DBX updates are now posted to Github by Microsoft, check [this page](https://uefi.org/revocationlistfile).
 
-Place the DBX update inside a FAT32 formatted usb key and boot into UEFI with the USB key plugged in. You should be able to set the DBX, and reactivate SecureBoot. 
+Place the DBX update inside your EFI partition, sign it with your KEK located in `/var/lib/sbctl/keys/KEK/KEK.key`, and boot into UEFI.
+You should be able to set the DBX if you've correctly signed it. See [Rod Smith's page](https://www.rodsbooks.com/efi-bootloaders/controlling-sb.html#key-revocation).
 
 # TPM auto-decrypt
 
