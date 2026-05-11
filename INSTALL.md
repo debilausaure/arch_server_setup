@@ -166,7 +166,7 @@ mount --mkdir /dev/virtual_partitions/home /mnt/home
 mount --mkdir /dev/<boot_partition> /mnt/efi
 ```
 ```sh
-swapon --mkdir /dev/virtual_partitions/swap
+swapon /dev/virtual_partitions/swap
 ```
 
 ## Setting up the initial filesystem
@@ -215,7 +215,7 @@ vim /mnt/etc/mkinitcpio.d/linux.preset
 >
 >PRESETS=('default')
 >
->default_uki="efi/EFI/Linux/arch-linux.efi"
+>default_uki="/efi/EFI/Linux/arch-linux.efi"
 >default_options="--splash=/usr/share/systemd/bootctl/splash-arch.bmp"
 >```
 
@@ -233,7 +233,7 @@ hwclock --systohc
 ```
 
 ```sh
-nano /etc/locale-gen
+nano /etc/locale.gen
 ```
 >```
 >...
@@ -277,7 +277,7 @@ mkinitcpio -P
 
 ## Add a boot entry for the UKI in UEFI
 ```sh
-efibootmgr --create --disk /dev/<boot_partition> --part 1 --label "Arch Linux" --loader '\EFI\Linux\arch-linux.efi' --unicode
+efibootmgr --create --disk /dev/<boot_disk> --part <boot_partition_number> --label "Arch Linux" --loader '\EFI\Linux\arch-linux.efi' --unicode
 ```
 
 System should now be able to boot through a custom boot entry in your UEFI.
@@ -295,6 +295,8 @@ sbctl create-keys
 ```sh
 sbctl enroll-keys -m #add -m if you'd like to dual boot windows
 ```
+When enrolling keys, if `sbctl` complains about not finding TPM Eventlog ("Could not find any TPM Eventlog in the system. This means we do not know if there is any OptionROM present on the system.") that means `/sys/kernel/security/tpm0/binary_bios_measurements` isn't accesible because the `sys` filesystem isn't mounted. By rebooting on the "rescue" mode, the `sys` filesystem will be automatically and available mounted. Be careful, since you will reboot in the newly installed system you won't have the network configured. If you'd like to use the TPM auto-decrypt feature, you should install the `tpm2-tss` before rebooting. 
+
 ```sh
 sbctl sign -s /efi/EFI/Linux/arch-linux.efi
 ```
