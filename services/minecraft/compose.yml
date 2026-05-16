@@ -17,32 +17,19 @@ services:
       MEGA_CREDS: /run/secrets/mega_credentials
 
   minecraft_proxy:
-    build: ./minecraft_proxy
-    image: minecraft_proxy
-    init: true
+    image: itzg/mc-router
     container_name: minecraft_proxy
-    command:
-      - "--listener-socket-addr"
-      - "0.0.0.0:25565"
-      - "--server-socket-addr"
-      - "minecraft_server:25565"
-      - "--minecraft-version"
-      - "1.21.4"
-      - "--minecraft-protocol-version"
-      - "769"
-      - "--minecraft-description"
-      - "Cool server"
-      - "--minecraft-container-name"
-      - "minecraft_server"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    networks:
-      traefik:
-        aliases:
-          - minecraft_proxy_traefik
-      proxy:
-        aliases:
-          - minecraft_proxy_internal
+    depends_on:
+      - minecraft_server
+    environment:
+      - "TRACE=true"
+      - "IN_DOCKER=true"
+      - "AUTO_SCALE_DOWN=true"
+      - "AUTO_SCALE_UP=true"
+      - "AUTO_SCALE_DOWN_AFTER=15m"
+      - "AUTO_SCALE_ASLEEP_MOTD=Server stopped. Join to start it !"
+      - "AUTO_SCALE_LOADING_MOTD=Server starting. Please bear with us..."
+      - "TZ=Europe/Paris"
     expose:
       - 25565
     labels:
@@ -53,6 +40,11 @@ services:
       - "traefik.tcp.routers.minecraft.service=minecraft"
       - "traefik.tcp.routers.minecraft.rule=HostSNI(`*`)"
       - "traefik.tcp.routers.minecraft.tls=false"
+    networks:
+      - traefik
+      - proxy
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   minecraft_server:
     build: ./minecraft_server
@@ -68,6 +60,9 @@ services:
     expose:
       - 25565
       - 25575
+    labels:
+      - "mc-router.host=minecraft.debilausau.re"
+      - "mc-router.network=minecraft_proxy"
     stdin_open: true
     tty: true
 
